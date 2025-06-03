@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://votaquangnhat.github.io/chess-fe",
+  "homepage": "https://github.com/nguyenthanh0312/Chess_project/tree/main/chess-fe",
   "scripts": {
     "dev": "vite",
     "predeploy": "npm run build",
