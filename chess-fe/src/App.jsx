@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import Chessboard from 'chessboardjsx';
 import { io } from 'socket.io-client';
 
-//const socket = io('https://chess-backend-q9sp.onrender.com/'); 
-//const socket = io("https://chess-backend-yot6.onrender.com", {transports: ["websocket"],});
 //const socket = io('http://127.0.0.1:5000/'); 
 const socket = io('https://vtqn-chess-backend.fayedark.com')
 
@@ -17,8 +15,8 @@ const App = () => {
   const [gameStarted, setGameStarted] = useState(false);
   const [aiDelay, setAiDelay] = useState(0);
   const [announcement, setAnnouncement] = useState(null);
-  const [PromotionMove, setPromotionMove] = useState(null);
-  const [promotionModalVisible, setPromotionModalVisible] = useState(false)
+  const [promotionMove, setPromotionMove] = useState(null);
+  const [promotionModalVisible, setPromotionModalVisible] = useState(false);
 
   useEffect(() => {
     socket.on('update', (data) => {
@@ -29,7 +27,7 @@ const App = () => {
 
     socket.on('announcement', (data) => {
       setAnnouncement(data.result);
-      setGameStarted(false); // Stop the game when there's an announcement
+      setGameStarted(false);
     });
 
     socket.on('error', (data) => {
@@ -45,13 +43,23 @@ const App = () => {
     };
   }, []);
 
+  // Kiểm tra có phải nước đi phong cấp tốt không
+  const isPawnPromotion = (from, to) => {
+    // Tốt trắng lên hàng 8, tốt đen xuống hàng 1
+    return (
+      (currentTurn === 'white' && from[1] === '7' && to[1] === '8') ||
+      (currentTurn === 'black' && from[1] === '2' && to[1] === '1')
+    );
+  };
+
   const handleMove = ({ sourceSquare, targetSquare }) => {
-    if (gameStarted && ((currentTurn === 'white' && whiteMode === 'Human') || (currentTurn === 'black' && blackMode === 'Human'))) {
-      if (
-        (currentTurn === 'white' && targetSquare[1] === '8') ||
-        (currentTurn === 'black' && targetSquare[1] === '1')) {
-        // Show promotion modal if the move reaches the promotion rank
-        setPromotionMove(sourceSquare + targetSquare); // Set the move
+    if (
+      gameStarted &&
+      ((currentTurn === 'white' && whiteMode === 'Human') ||
+        (currentTurn === 'black' && blackMode === 'Human'))
+    ) {
+      if (isPawnPromotion(sourceSquare, targetSquare)) {
+        setPromotionMove({ from: sourceSquare, to: targetSquare });
         setPromotionModalVisible(true);
       } else {
         socket.emit('move', { from: sourceSquare, to: targetSquare, promotion: '' });
@@ -60,8 +68,15 @@ const App = () => {
   };
 
   const handlePromotion = (piece) => {
-    socket.emit('move', { from: PromotionMove, to: '', promotion: piece }); // from and to are merged into PromotionMove
-    setPromotionModalVisible(false); // Hide the promotion modal
+    if (promotionMove) {
+      socket.emit('move', {
+        from: promotionMove.from,
+        to: promotionMove.to,
+        promotion: piece
+      });
+      setPromotionMove(null);
+      setPromotionModalVisible(false);
+    }
   };
 
   const handleReset = () => {
@@ -87,7 +102,6 @@ const App = () => {
       }
     }
   }, [currentTurn, whiteMode, blackMode, whiteDepth, blackDepth, gameStarted]);
-
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '50px' }}>
@@ -152,17 +166,22 @@ const App = () => {
           />
         </label>
       </div>
-       {/* Promotion Modal */}
-       {promotionModalVisible && (
-        <div >
+      {/* Promotion Modal */}
+      {promotionModalVisible && (
+        <div>
           <h3>Promote Pawn</h3>
           <button onClick={() => handlePromotion('q')}>Queen</button>
           <button onClick={() => handlePromotion('r')}>Rook</button>
           <button onClick={() => handlePromotion('b')}>Bishop</button>
-          <button onClick={() => handlePromotion('k')}>Knight</button>
+          <button onClick={() => handlePromotion('n')}>Knight</button>
         </div>
       )}
-      <Chessboard position={position} onDrop={handleMove} draggablePieces={gameStarted} />
+<Chessboard
+  position={position}
+  onDrop={handleMove}
+  draggablePieces={gameStarted}
+  pieceTheme={piece => `https://chessboardjs.com/img/chesspieces/wikipedia/${piece}.png`}
+/>
     </div>
   );
 };

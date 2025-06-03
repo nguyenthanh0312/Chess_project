@@ -17,7 +17,7 @@ def evaluation(game):
     result = check_game_status()
     if not result:
         data = {'fen': game.fen()}
-        url = "https://chess-api.com/v1"  # The API endpoint
+        url = "https://chess-api.com/v1"  
         headers = {
             "Content-Type": "application/json"
         }
@@ -25,7 +25,7 @@ def evaluation(game):
         if response.status_code == 200:
             d = response.json()
             if 'eval' in d:
-                return d['eval']  # Print the value of 'eval' key if it exists
+                return d['eval']  
             else:
                 return 'error from API'
         else:
@@ -56,22 +56,25 @@ def handle_move(data):
     global game
     from_square = data['from']
     to_square = data['to']
-    promotion = data['promotion']
+    promotion = data.get('promotion', '')
 
     try:
-        move = chess.Move.from_uci(from_square + to_square + promotion)
+        piece = game.piece_at(chess.parse_square(from_square))
+        move_uci = from_square + to_square
+        if piece and piece.piece_type == chess.PAWN and promotion:
+            move_uci += promotion
+        move = chess.Move.from_uci(move_uci)
         if move in game.legal_moves:
             game.push(move)
             result = check_game_status()
             if result:
                 emit('announcement', {'result': result}, broadcast=True)
             
-            score = 1#evaluation(game)
+            score = 1
             emit('update', {'fen': game.fen(),
                             'turn': 'white' if game.turn else 'black',
-                            'message': ('black' if game.turn else 'white') + ':' + from_square + to_square + promotion + f' score:{score}'},
+                            'message': ('black' if game.turn else 'white') + ':' + move_uci + f' score:{score}'},
                 broadcast=True)
-
         else:
             emit('error', {'message': 'Illegal move'}, broadcast=True)
     except Exception as e:
