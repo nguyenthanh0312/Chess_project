@@ -7,6 +7,7 @@ import mcts
 import time
 import requests
 import json
+import cnn
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -97,6 +98,9 @@ def handle_ai_move(data):
             move = minimax_alphabeta.findMoveAlphaBeta(board=game, depth=param, alpha=-float('inf'), beta=float('inf'))[1]
         elif mode == "MCTS":
             move = mcts.mcts_findNextMove(game=game, iteration=param)
+        elif mode == "CNN":
+            move = cnn.predict_move(game)
+            move = chess.Move.from_uci(move)
         elif mode == "MCTS_NN":
             pass
 
